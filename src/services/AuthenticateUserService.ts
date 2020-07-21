@@ -1,5 +1,7 @@
 import { getRepository } from 'typeorm';
 import { compare } from 'bcryptjs';
+import { sign } from 'jsonwebtoken';
+import authConfig from '../config/auth';
 
 import User from '../Models/User';
 
@@ -10,6 +12,7 @@ interface Request {
 
 interface Response {
     user: User;
+    token: string;
 }
 
 class AuthenticateUserService {
@@ -19,15 +22,20 @@ class AuthenticateUserService {
         const user = await authRepository.findOne({ where: { email } });
 
         if (!user) {
-            throw new Error('Email/password not founded');
+            throw new Error('Email/password incorrect');
         }
         const passwordMatched = await compare(password, user.password);
 
         if (!passwordMatched) {
-            throw new Error('Email/password not founded');
+            throw new Error('Email/password incorrect');
         }
 
-        return { user };
+        const token = sign({}, authConfig.jwt.secret, {
+            subject: user.id,
+            expiresIn: authConfig.jwt.expiredin,
+        });
+
+        return { user, token };
     }
 }
 
